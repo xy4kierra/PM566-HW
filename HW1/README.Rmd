@@ -1,0 +1,301 @@
+---
+title: "hw1-pm566"
+author: "Xiaoyu Zhu"
+date: "9/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r cars}
+summary(cars)
+```
+
+# Homework1
+
+```{r}
+#library packages
+library(data.table)
+library(tidyverse)
+library(skimr)
+library(lubridate)
+library(leaflet)
+
+```
+
+
+
+## STEP 1 
+###  Read in the data using data.table(). 
+```{r}
+
+cadata2004 <- data.table::fread("pm2.5_ca_2004.csv",na="")
+cadata2019 <- data.table::fread("pm2.5_ca_2019.csv",na="")
+
+```
+
+### For each of the two datasets, check the dimensions, headers, footers, variable names and variable types. 
+```{r}
+#dimension
+dim(cadata2004)
+dim(cadata2019)
+```
+
+```{r}
+head(cadata2004)
+tail(cadata2004)
+```
+
+```{r}
+head(cadata2019)
+tail(cadata2019)
+```
+
+```{r}
+names(cadata2004)
+
+names(cadata2019)
+```
+
+```{r}
+str(cadata2004)
+str(cadata2019)
+```
+
+### Check for any data issues, particularly in the key variable we are analyzing.
+
+```{r}
+#check data2004
+skim(cadata2004)
+
+```
+
+```{r}
+# delete missing data in 2004
+cadata2004 %>%
+  filter(is.na(CBSA_CODE))
+
+cadata2004<-
+  cadata2004%>%
+  na.omit()
+```
+
+```{r}
+#check data2019
+skim(cadata2019)
+
+```
+
+```{r}
+# delete missing data in 2019
+
+  cadata2019 %>%
+  filter(is.na(CBSA_CODE))
+
+cadata2019<-
+  cadata2019%>%
+  na.omit()
+```
+
+
+## STEP 2
+```{r}
+# Combine the two years of data into one data frame. 
+cadata2004 <- mutate(cadata2004, year=2004) 
+cadata2019 <- mutate(cadata2019, year=2019)
+alldata<-union_all(cadata2004,cadata2019)
+```
+
+```{r}
+# Change the names of the key variables so that they are easier to refer to in your code.
+
+alldata <- 
+  rename(alldata,
+         pm2.5 = "Daily Mean PM2.5 Concentration",
+         lat = "SITE_LATITUDE",
+         lon = "SITE_LONGITUDE",
+         site.name = "Site Name",
+         site.id = "Site ID")
+         
+```
+
+
+## STEP 3
+Create a basic map in leaflet() that shows the locations of the sites (make sure to use different colors for each year). Summarize the spatial distribution of the monitoring sites.
+
+```{r}
+# make a color palette
+year.pal = colorFactor(c('purple','pink'), domain= alldata$year)
+
+# make the map
+pm2.5map<- 
+  leaflet(alldata) %>% 
+  addProviderTiles("location of pm2.5 sites") %>% 
+  addCircles(
+    lat         = ~lat, 
+    lng         = ~lon,
+    fillOpacity = 1, 
+    radius      = 500, 
+    color       = ~ year.pal(year)) %>%
+    
+# And a pretty legend
+  addLegend(position = 'bottomleft', 
+            pal=year.pal, 
+            values=alldata$year,
+            title='locations', opacity=1)
+
+pm2.5map
+
+```
+
+
+
+## STEP 4
+Check for any missing or implausible values of PM in the combined dataset. Explore the proportions of each and provide a summary of any temporal patterns you see in these observations.
+
+```{r}
+# Check for any missing or implausible values of PM in the combined dataset.
+skim(alldata)
+
+alldata<-
+  alldata%>%
+  filter(pm2.5>0)
+
+```
+
+```{r}
+# Explore the proportions of each and provide a summary of any temporal patterns you see in these observations.
+ggplot(alldata,aes(x=site.name,y=pm2.5))+
+  geom_point()
+
+```
+
+
+
+## STEP 5
+Explore the main question of interest at three different spatial levels. Create exploratory plots (e.g. boxplots, histograms, line plots) and summary statistics that best suit each level of data. Be sure to write up explanations of what you observe in these data.
+
+```{r}
+# categorize pm2.5
+alldata <- 
+  alldata %>%
+  mutate(pm.cat = case_when(
+    pm2.5 <= 50              ~ "<=50",
+    pm2.5 >  50 & pm2.5  <= 100 ~ "50-100",
+    pm2.5 >  100 & pm2.5 <= 150 ~ "100-150",
+    pm2.5 >  150 & pm2.5 <= 200 ~ "150-200",
+    pm2.5 >= 200 ~ ">=200")
+  )
+
+# Convert to Factor
+alldata$pm.cat <- factor(alldata$pm.cat,
+                    levels = c("<=50", "50-100", "100-150", "150-200", ">=200"))
+```
+
+### state
+```{r}
+# boxplots
+ggplot(alldata, aes(y = pm2.5)) +
+  geom_boxplot() +
+  facet_wrap(. ~ year)
+```
+#### ???
+
+```{r}
+# histograms
+ggplot(alldata, aes(x = pm2.5)) +
+  geom_histogram() +
+  facet_wrap(. ~ year)
+```
+#### what we can see in the picture that the pm2.5 in 2019 is obviously higher than 2004.
+
+
+
+```{r}
+# line plots
+ggplot(alldata, aes(y=pm2.5,x=Date)) +
+  geom_line() +
+  facet_wrap(. ~ year)
+```
+
+```{r}
+# summary statistics
+alldata %>%
+  group_by(STATE, year) %>% 
+  summarise(mean = mean(pm2.5),
+            median = median(pm2.5),
+            sd = sd(pm2.5),
+            min = min(pm2.5),
+            max = max(pm2.5),
+            IQR = IQR(pm2.5))
+
+```
+
+### county
+```{r}
+# boxplots
+ggplot(alldata, aes(x = pm2.5)) +
+  geom_boxplot() +
+  facet_wrap(. ~ year+COUNTY_CODE,scales = "free")
+
+# histograms
+ggplot(alldata, aes(y = pm2.5)) +
+  geom_histogram() +
+  facet_wrap(. ~ year+COUNTY_CODE,scales = "free")
+
+
+
+# summary statistics
+alldata %>%
+  group_by(COUNTY, year) %>% # COUNTY before year to see same county data side-by-side
+  summarise(mean = mean(pm2.5),
+            median = median(pm2.5),
+            sd = sd(pm2.5),
+            min = min(pm2.5),
+            max = max(pm2.5),
+            IQR = IQR(pm2.5))
+
+
+```
+
+### site in Los Angeles
+```{r}
+# boxplots
+ggplot(alldata, aes(x = pm2.5)) +
+  geom_boxplot() +
+  facet_wrap(. ~ year+site.name)
+# histograms
+ggplot(alldata, aes(y = pm2.5)) +
+  geom_histogram() +
+  facet_wrap(. ~ year+site.name)
+
+
+# summary statistics
+alldata %>%
+  group_by(COUNTY, year) %>% # COUNTY before year to see same county data side-by-side
+  summarise(mean = mean(pm2.5),
+            median = median(pm2.5),
+            sd = sd(pm2.5),
+            min = min(pm2.5),
+            max = max(pm2.5),
+            IQR = IQR(pm2.5))
+```
+
+
+
+
+
+
+
+
+
+
+
