@@ -155,7 +155,7 @@ pm2.5map<-
 pm2.5map
 
 ```
-
+#### they are all divided in the southwest of USA, and I think most them are close to freeways.
 
 
 ## STEP 4
@@ -177,7 +177,7 @@ ggplot(alldata,aes(x=site.name,y=pm2.5))+
   geom_point()
 
 ```
-
+#### It appears the values of most pm2.5 points are less than 50. The distribution could be tested as normal distribution for that the sample size is big enough.
 
 
 ## STEP 5
@@ -207,7 +207,6 @@ ggplot(alldata, aes(y = pm2.5)) +
   geom_boxplot() +
   facet_wrap(. ~ year)
 ```
-#### ???
 
 ```{r}
 # histograms
@@ -215,7 +214,7 @@ ggplot(alldata, aes(x = pm2.5)) +
   geom_histogram() +
   facet_wrap(. ~ year)
 ```
-#### what we can see in the picture that the pm2.5 in 2019 is obviously higher than 2004.
+#### what we can see in the picture that the count number of pm2.5 in 2019 is obviously higher than 2004.
 
 
 
@@ -262,9 +261,8 @@ alldata %>%
             min = min(pm2.5),
             max = max(pm2.5),
             IQR = IQR(pm2.5))
-
-
 ```
+#### In some county, like Alameda, Butte and Contra Costa, the value of PM2.5 in 2004 is higher than in 2019. However in other county, like Del Norte, the PM2.5 is higher in 2019 than in 2004.
 
 ### site in Los Angeles
 ```{r}
@@ -280,7 +278,7 @@ ggplot(alldata, aes(y = pm2.5)) +
 
 # summary statistics
 alldata %>%
-  group_by(COUNTY, year) %>% # COUNTY before year to see same county data side-by-side
+  group_by(STATE, year) %>% # COUNTY before year to see same county data side-by-side
   summarise(mean = mean(pm2.5),
             median = median(pm2.5),
             sd = sd(pm2.5),
@@ -289,7 +287,7 @@ alldata %>%
             IQR = IQR(pm2.5))
 ```
 
-
+#### From the picture we can see only eight sites are tested. In this eight sites, the value of PM2.5 falls. And generally, overall concentration has dropped.
 
 
 
