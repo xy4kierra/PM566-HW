@@ -1,0 +1,4 @@
+"0","# Barchart"
+"0","ggplot(chs, aes(x = obesity_level, y = fev,fill=obesity_level)) + "
+"0","    geom_bar(stat=""identity"")"
+"0",""

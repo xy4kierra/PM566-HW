@@ -1,0 +1,8 @@
+"0","# create smoke gas exposure"
+"0","chs <- "
+"0","chs %>%"
+"0","  mutate(smoke_gas_exposure = case_when(smoke == 0 & gasstove == 0 ~ ""no exposure"","
+"0","                                        smoke == 1 & gasstove == 0 ~ ""smoke only"","
+"0","                                        smoke == 0 & gasstove == 1 ~ ""gas only"","
+"0","                                        smoke == 1 & gasstove == 1 ~ ""smoke & gas"","
+"0","  ))"

@@ -1,0 +1,8 @@
+"0","# creat obesity_level"
+"0","chs <- "
+"0","chs %>%"
+"0","  mutate(obesity_level = case_when(bmi < 14 ~ ""underweight"","
+"0","                                   bmi >= 14 & bmi < 22 ~ ""normal"","
+"0","                                   bmi >= 22 & bmi < 24 ~ ""overweight"","
+"0","                                   bmi >= 24 ~ ""obese"""
+"0","  ))"

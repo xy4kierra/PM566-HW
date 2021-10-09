@@ -1,0 +1,7 @@
+"0","# smoke gas exposure"
+"0","chs %>%"
+"0","  group_by(smoke_gas_exposure) %>%"
+"0","  summarise(fev.mean = mean(fev,na.rm=T), fev.sd = sd(fev,na.rm=T),asthma.mean = mean(asthma,na.rm=T),asthma.sd=sd(asthma,na.rm=T)) %>%"
+"0","  arrange(desc(fev.mean)) %>%"
+"0","  arrange(desc(asthma.mean))%>%"
+"0","  knitr::kable()"

@@ -1,0 +1,2 @@
+"0","# merge data"
+"0","chs<-merge(c1,c2,by = ""townname"", all.x = TRUE)"

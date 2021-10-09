@@ -1,0 +1,8 @@
+"0","# Scatterplots"
+"0","ggplot(data = chs, aes(x = bmi, y = fev)) +"
+"0","  geom_point() +"
+"0","  geom_smooth(method = ""lm"", se=FALSE) +"
+"0","  facet_wrap(~ townname) +"
+"0","  labs(x = ""BMI"", y = ""FEV"", title = ""regression lines of BMI vs FEV"")"
+"2","`geom_smooth()` using formula 'y ~ x'
+"

@@ -1,0 +1,3 @@
+"0","# read data"
+"0","c1<-fread(""chs_individual.csv"")"
+"0","c2<-fread(""chs_regional.csv"")"
