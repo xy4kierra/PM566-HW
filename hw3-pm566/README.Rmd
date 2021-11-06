@@ -1,0 +1,193 @@
+---
+title: "Assignment 03 - Web Scraping and Text Mining"
+author: "Xiaoyu Zhu"
+date: "11/5/2021"
+output: github_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(include  = TRUE, echo=FALSE)
+library(xml2)
+library(stringr)
+library(httr)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(forcats)
+library(tidytext)
+```
+
+# APIs
+## Using the NCBI API, look for papers that show up under the term “sars-cov-2 trial vaccine.” Look for the data in the pubmed database, and then retrieve the details of the paper as shown in lab 7. How many papers were you able to find?
+```{r}
+# Downloading the website
+website <- xml2::read_html("https://pubmed.ncbi.nlm.nih.gov/?term=sars-cov-2+trial+vaccine")
+# Finding the counts
+counts <- xml2::xml_find_first(website, "/html/body/main/div[9]/div[2]/div[2]/div[1]/div[1]/span")
+# Turning it into text
+counts <- as.character(counts)
+# Extracting the data using regex
+stringr::str_extract(counts, "[0-9,]+")
+```
+
+I am able to find `r counts ` papers.
+
+## Using the list of pubmed ids you retrieved, download each papers’ details using the query parameter rettype = abstract. If you get more than 250 ids, just keep the first 250.
+
+```{r}
+query_ids <- GET(
+  url   = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+  query = list(
+      db     = "pubmed",
+      term   = "sars-cov-2 trial vaccine",
+      retmax = 250
+    )
+)
+```
+
+```{r}
+# Extracting the content of the response of GET
+ids <- httr::content(query_ids)
+# Turn the result into a character vector
+ids <- as.character(ids)
+# Find all the ids 
+ids <- stringr::str_extract_all(ids, "<Id>[1-9]+</Id>")[[1]]
+# Remove all the leading and trailing <Id> </Id>. Make use of "|"
+ids <- stringr::str_remove_all(ids, "<Id>|</Id>")
+```
+
+
+```{r}
+publications <- GET(
+  url   = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
+  query = list(
+    db = "pubmed",
+    id = paste(ids, collapse = ","),
+    retmax = 250,
+    rettype = "abstract"
+    )
+)
+# Turning the output into character vector
+publications <- httr::content(publications)
+publications_txt <- as.character(publications)
+```
+
+## As we did in lab 7. Create a dataset containing the following:
+
+1 Pubmed ID number,
+2 Title of the paper,
+3 Name of the journal where it was published,
+4 Publication date, and
+5 Abstract of the paper (if any).
+
+```{r}
+pub_char_list <- xml2::xml_children(publications)
+pub_char_list <- sapply(pub_char_list, as.character)
+abstracts <- stringr::str_extract(pub_char_list, "<AbstractText>(\\n|.)+</AbstractText>")
+abstracts <- stringr::str_remove_all(abstracts, "</?[[:alnum:]]+>")
+abstracts <- stringr::str_replace_all(abstracts, "\\s+", " ")
+```
+
+```{r}
+titles <- str_extract(pub_char_list, "<ArticleTitle>(\\n|.)+?</ArticleTitle>")
+titles <- str_remove_all(titles, "</?[[:alnum:]]+>")
+titles <- str_replace_all(titles, "\\s+", " ")
+```
+
+```{r}
+journal <- str_extract(pub_char_list, "<Title>(\\n|.)+?</Title>")
+journal <- str_remove_all(journal, "</?[[:alnum:]]+>")
+journal <- str_replace_all(journal, "\\s+", " ")
+```
+ 
+```{r}
+dates <- str_extract(pub_char_list, "<PubDate>(\\n|.)+?</PubDate>")
+dates <- str_remove_all(dates, "</?[[:alnum:]]+>")
+dates <- str_replace_all(dates, "\\s+", " ")
+```
+- There are 61 papers missing abstracts.
+
+**Only the first five data records are shown**
+
+```{r}
+database <- data.frame(
+  PubMedID  = ids,
+  Title     = titles,
+  Journal   = journal,
+  Date      = dates,
+  Abstracts = abstracts
+)
+knitr::kable(head(database,5))
+```
+- Check the first 5 papers and the dataset is successfully created.
+
+
+
+# Text Mining
+## A new dataset has been added to the data science data repository https://github.com/USCbiostats/data-science-data/tree/master/03_pubmed. The dataset contains 3241 abstracts from articles across 5 search terms. Your job is to analyse these abstracts to find interesting insights.
+```{r}
+df<-read_csv("pubmed.csv")
+```
+
+### 1 Tokenize the abstracts and count the number of each token. Do you see anything interesting? Does removing stop words change what tokens appear as the most frequent? What are the 5 most common tokens for each search term after removing stopwords?
+
+```{r}
+# not removing stop words
+df %>%
+  unnest_tokens(token, abstract)%>%
+  count(token,sort = TRUE)%>%
+  top_n(10, n)
+
+```
+What we can see from the table is that if not removing stop words the 5 most common tokens is "the", "of","and","in" and "to". 
+
+```{r}
+# removing stop words
+df %>%
+  unnest_tokens(word, abstract)%>%
+  anti_join(stop_words,by=c("word"))%>%
+  group_by(term) %>%
+  count(word,sort=TRUE)%>%
+  top_n(10,n)%>%
+  ggplot(aes(x=word,y=n))+
+  facet_wrap(~term,scales = "free") +
+  geom_col()+
+  coord_flip()
+
+
+```
+When removing stop words, the most common tokens are "covid", "19", "cancer", "prostate", and "patients". The finding is in line with expectations.
+
+### 2 Tokenize the abstracts into bigrams. Find the 10 most common bigram and visualize them with ggplot2.
+```{r}
+df %>%
+  unnest_ngrams(ngram, abstract, n = 2) %>%
+  count(ngram, sort = TRUE)%>%
+  top_n(10,n)%>%
+  ggplot(aes(x=ngram,y=n))+
+  geom_col()+
+  coord_flip()
+
+```
+
+### 3 Calculate the TF-IDF value for each word-search term combination. (here you want the search term to be the “document”) What are the 5 tokens from each search term with the highest TF-IDF value? How are the results different from the answers you got in question 1?
+
+```{r}
+df %>%
+   unnest_tokens(text, abstract) %>%
+   count(term, text, sort = TRUE) %>%
+   bind_tf_idf(text, term, n) %>%
+   group_by(term) %>%
+   top_n(5, tf_idf) %>%
+  ggplot(aes(x=text,y=tf_idf))+facet_wrap(~term,scales = "free") +geom_col()+coord_flip()
+
+```
+- Under the term covid: covid and pandemic has the highest TF-IDF value, which excludes 19, patients and disease(TF-IDF=0).
+- Under the term cystic fibrosis: cf becomes the first term instead of fibrosis.
+- Under the term meningitis: patients has a TF-IDF value at 0.
+- Under the term preeclampsia: tokens like pre and woman are excluded(TF-IDF=0).
+- Under the term prostate cancer: only prostate has TF-IDF value.
+
+
+
+
