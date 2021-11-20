@@ -108,3 +108,4 @@ fibrosis: cf becomes the first term instead of fibrosis. - Under the
 term meningitis: patients has a TF-IDF value at 0. - Under the term
 preeclampsia: tokens like pre and woman are excluded(TF-IDF=0). - Under
 the term prostate cancer: only prostate has TF-IDF value.
+
